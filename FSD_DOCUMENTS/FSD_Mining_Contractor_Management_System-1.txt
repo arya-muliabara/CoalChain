@@ -1,0 +1,471 @@
+FUNCTIONAL SPECIFICATION DOCUMENT (FSD) MINING CONTRACTOR MANAGEMENT
+SYSTEM (MCMS)
+
+Document Version : 1.0 Document Status : Draft Business Area : Mining
+Operation – Coal Mining System Type : Web-Based Mining Contractor
+Management System Prepared For : Coal Mining Company Date : August 2026
+
+1. DOCUMENT PURPOSE
+
+Dokumen ini mendefinisikan kebutuhan fungsional untuk Mining Contractor
+Management System (MCMS), yaitu sistem terintegrasi untuk mengelola
+aktivitas penambangan yang dilaksanakan oleh mining contractor.
+
+Sistem dirancang untuk memberikan kontrol kepada Owner atas: - Mining
+plan dan target produksi - Aktivitas dan progress kontraktor - Fleet dan
+equipment - Manpower - Coal dan overburden production - Hauling - Survey
+dan quantity measurement - Fuel consumption - Contractor performance -
+Contract utilization - SLA/KPI - Penalty dan incentive - Progress
+claim - Billing verification - Cost per unit - Management reporting
+
+Tujuan akhirnya adalah membentuk single source of truth antara Owner,
+Mining Operation, Engineering, Survey, Finance, Procurement/Commercial,
+dan Contractor.
+
+2. BUSINESS OBJECTIVES
+
+Production Control: Actual production dapat dibandingkan dengan target
+secara harian. Contractor Control: Performance setiap contractor dapat
+dimonitor. Quantity Assurance: Quantity invoice harus berdasarkan
+quantity yang telah diverifikasi. Cost Control: Mining cost dapat
+dimonitor sampai level contractor/pit/activity. Contract Control: Nilai
+kontrak, utilization, dan remaining contract dapat dimonitor. Equipment
+Control: Productivity dan utilization equipment dapat dianalisis. Fuel
+Control: Fuel consumption dapat dibandingkan dengan production output.
+Operational Visibility: Management mendapatkan informasi operasional
+secara near real-time. Billing Accuracy: Mengurangi dispute dan
+overbilling contractor. Performance Management: KPI, penalty, incentive,
+dan SLA dihitung secara sistematis. Auditability: Seluruh transaksi
+memiliki approval dan audit trail.
+
+3. SYSTEM SCOPE
+
+MCMS mencakup proses Contract → Planning → Operation → Measurement →
+Reconciliation → Performance → Billing → Cost → Management Insight.
+
+Functional domain: 1. Master Data Management 2. Contractor & Contract
+Management 3. Mining Planning 4. Daily Operation 5. Equipment & Fleet
+Management 6. Coal Production 7. Overburden Management 8. Hauling
+Management 9. Survey & Measurement 10. Fuel Management 11. Contractor
+Performance Management 12. Contract Progress & Utilization 13. Progress
+Claim 14. Billing Verification 15. Penalty & Incentive 16. Cost
+Management 17. HSE Performance 18. Dashboard & Analytics 19. Workflow &
+Approval 20. Document Management 21. Integration 22. Audit Trail &
+Security
+
+4. HIGH-LEVEL BUSINESS PROCESS
+
+CONTRACT & WORK ORDER ↓ MINING PLAN ↓ MONTHLY / WEEKLY / DAILY TARGET ↓
+CONTRACTOR RESOURCE PLAN ↓ EQUIPMENT + MANPOWER ↓ DAILY MINING OPERATION
+↓ OB Removal / Coal Getting / Coal Hauling / Road & Supporting
+Activities ↓ SURVEY / MEASUREMENT ↓ PRODUCTION RECONCILIATION ↓
+CONTRACTOR PERFORMANCE ↓ QUANTITY VERIFICATION ↓ PROGRESS CLAIM ↓
+COMMERCIAL VERIFICATION ↓ PENALTY / INCENTIVE ↓ BILLING ↓ COST ANALYSIS
+↓ MANAGEMENT DASHBOARD
+
+5. USER & ROLE MANAGEMENT
+
+Roles: System Administrator, Mining Operation, Mine Engineering,
+Surveyor, Dispatch, Fuel Controller, HSE, Contractor User, Contractor
+Supervisor, Owner Supervisor, Commercial, Procurement, Finance, Mine
+Manager, General Manager, Director, Auditor.
+
+Access control harus mendukung Role-Based Access Control, menu-level
+authorization, function-level authorization, site-level access,
+contractor-level access, approval authorization, data confidentiality,
+serta Read/Create/Update/Approve/Cancel privileges.
+
+Contractor hanya dapat mengakses data yang terkait dengan
+perusahaan/kontraknya sendiri.
+
+6. MASTER DATA MANAGEMENT
+
+Organization: Company, Site, Mining Area, Pit, Block, Seam, Stockpile,
+Disposal, Hauling Route, Workshop, Fuel Station.
+
+Contractor Master: Contractor ID, Contractor Name, Vendor ID, Address,
+Contact Person, Contract Number, Contract Start, Contract End, Status,
+Operational Area, PIC Owner, PIC Contractor.
+
+Equipment Master: Equipment ID, Contractor, Equipment Category,
+Equipment Type, Brand, Model, Serial Number, Capacity, Ownership,
+Commission Date, Status.
+
+Equipment Category: Excavator, Dump Truck, Dozer, Grader, Compactor,
+Water Truck, Fuel Truck, Loader, Support Equipment.
+
+Activity Master: OB Removal, Topsoil Removal, Coal Getting, Coal
+Hauling, OB Hauling, Road Maintenance, Dewatering, Land Clearing,
+Rehabilitation, Supporting Work.
+
+7. CONTRACT MANAGEMENT
+
+Contract Header: Contract Number, Contractor, Contract Type, Effective
+Date, Expiry Date, Contract Value, Currency, Site, Scope of Work,
+Contract Owner, Payment Terms, Retention, Status.
+
+Contract Rate dapat memiliki multiple rate berdasarkan Activity, Unit,
+Effective Date, Distance Range, Material, Equipment, Location,
+Escalation Formula, Fuel Adjustment, Minimum Quantity, dan Maximum
+Quantity.
+
+Contoh rate: OB Removal (Rp/BCM), Coal Getting (Rp/Ton), Coal Hauling
+(Rp/Ton-KM), Equipment Rental (Rp/Hour), Road Maintenance (Rp/Month).
+
+Contract Amendment harus mendukung rate revision, contract extension,
+scope addition/reduction, dan contract value adjustment. Semua perubahan
+harus mempertahankan historical version.
+
+8. MINING PLAN
+
+Planning hierarchy: Life of Mine → Annual Plan → Monthly Plan → Weekly
+Plan → Daily Plan.
+
+Production Target dapat didefinisikan berdasarkan Site, Pit, Contractor,
+Activity, Material, dan Period.
+
+KPI: OB Target, Coal Target, Stripping Ratio, Hauling Target, Equipment
+Productivity, Fuel Ratio.
+
+9. DAILY OPERATION
+
+Contractor melakukan input Daily Production Report.
+
+Informasi minimum: Date, Shift, Contractor, Pit, Block, Activity,
+Material, Loading Point, Dumping Point, Equipment, Quantity, Distance,
+Working Hour, Standby Hour, Breakdown Hour.
+
+Workflow: Contractor Input → Contractor Supervisor → Owner Supervisor →
+Verified Production.
+
+Setelah verified, data menjadi dasar reconciliation.
+
+10. EQUIPMENT & FLEET MANAGEMENT
+
+Equipment Status: Working, Standby, Breakdown, Maintenance, Waiting,
+Idle.
+
+Equipment Hours: Available Hours, Working Hours, Standby Hours,
+Breakdown Hours, Maintenance Hours.
+
+KPI: Physical Availability (PA) = Available Hours / Scheduled Hours ×
+100% Utilization (UA) = Working Hours / Available Hours × 100% Excavator
+Productivity = BCM / Working Hour Hauling Productivity = Ton / Truck
+Hour
+
+11. OVERBURDEN MANAGEMENT
+
+System mencatat Pit, Block, Loading Point, Disposal, Equipment,
+Contractor, Distance, BCM, dan Working Hour.
+
+Dashboard: OB Plan, OB Actual, Achievement %, BCM/hour, BCM/equipment,
+Cost/BCM, Contractor ranking.
+
+12. COAL PRODUCTION
+
+Coal production flow: Coal Getting → ROM → Coal Hauling → Stockpile →
+Crusher / Processing.
+
+Data: Seam, Pit, Contractor, Quantity, Quality, Destination, Equipment,
+Shift.
+
+System dapat melakukan reconciliation antara Mining Quantity, Survey
+Quantity, Weighbridge Quantity, dan Stockpile Quantity.
+
+13. HAULING MANAGEMENT
+
+System menyimpan Origin, Destination, Route, Distance, Material,
+Equipment, Trip, Quantity.
+
+Commercial quantity dapat menggunakan Ton × Distance atau BCM ×
+Distance, tergantung kontrak.
+
+14. SURVEY & MEASUREMENT
+
+Survey merupakan fungsi critical karena menjadi dasar commercial
+quantity.
+
+Data: Survey Date, Survey Period, Pit, Block, Contractor, Material,
+Beginning Volume, Ending Volume, Difference, Survey Quantity.
+
+Workflow: Survey Measurement → Survey Verification → Engineering Review
+→ Operation Confirmation → Final Quantity.
+
+Final quantity dikunci setelah approval.
+
+15. PRODUCTION RECONCILIATION
+
+System membandingkan Contractor DPR, Owner Operation, Survey, dan
+Commercial Approved Quantity.
+
+System menghitung variance secara otomatis. Tolerance dapat
+dikonfigurasi, misalnya ±2%.
+
+Jika melebihi tolerance: Exception → Investigation → Resolution →
+Approval.
+
+16. FUEL MANAGEMENT
+
+Fuel Transaction: Date, Equipment, Contractor, Fuel Station, Liter, Hour
+Meter, Operator, Fuel Truck, Transaction Reference.
+
+Fuel KPI: Fuel Ratio = Liter / BCM Fuel Ratio = Liter / Ton Fuel
+Efficiency = Liter / Operating Hour
+
+System membandingkan Standard Fuel Ratio vs Actual Fuel Ratio dan
+menghasilkan alert jika melewati threshold.
+
+17. CONTRACTOR PERFORMANCE MANAGEMENT
+
+Contractor Scorecard dapat menggunakan kategori dan bobot contoh:
+Production 30%, Equipment 15%, Productivity 15%, Fuel 10%, HSE 15%,
+Quality 5%, Compliance 10%.
+
+Final Score = Σ (KPI Achievement × KPI Weight)
+
+Output: Contractor Ranking, Monthly Score, Trend, KPI Detail,
+Underperformance Alert.
+
+18. HSE PERFORMANCE
+
+Data: Fatality, LTI, Medical Treatment, First Aid, Near Miss, Property
+Damage, Environmental Incident, Safety Observation, Inspection, Safety
+Compliance.
+
+KPI: LTIFR, TRIFR, Incident Rate, Safety Compliance, Inspection
+Compliance.
+
+HSE score dapat menjadi bagian dari contractor performance.
+
+19. CONTRACT PROGRESS
+
+Original Contract Value + Amendment = Revised Contract Value.
+
+Revised Contract Value - Previous Claims - Current Claim = Remaining
+Contract.
+
+Dashboard: Contract Value, Utilized Value, Remaining Value, Utilization
+%, Contract Expiry, Forecast Completion.
+
+Alert: Contract >80% utilized, Contract >90% utilized, Contract
+expiring, Quantity exceeding contract.
+
+20. PROGRESS CLAIM
+
+Contractor dapat membuat progress claim berdasarkan quantity yang telah
+approved.
+
+System mengambil otomatis Approved Quantity, Contract Rate, Distance,
+Adjustment, Penalty, Incentive.
+
+Gross Claim = Approved Quantity × Contract Rate. Net Claim = Gross
+Claim + Incentive - Penalty - Deduction.
+
+21. BILLING VERIFICATION
+
+Workflow: Contractor Claim → Operation Verification → Survey
+Verification → Engineering Verification → Commercial Verification → Mine
+Manager Approval → Finance → Invoice → Payment.
+
+System harus mencegah invoice apabila quantity belum approved.
+
+22. PENALTY & INCENTIVE
+
+Rule dapat dikonfigurasi berdasarkan contract.
+
+Penalty: Production below target, Equipment availability below SLA,
+Excessive fuel consumption, Safety violation, Quality deviation,
+Environmental violation.
+
+Incentive: Production above target, Productivity improvement, Fuel
+efficiency, Zero incident, Cost reduction.
+
+Calculation engine harus configurable tanpa perubahan source code.
+
+23. COST MANAGEMENT
+
+System menghitung cost berdasarkan Contractor, Pit, Activity, Equipment,
+dan Period.
+
+KPI: OB Cost = Total OB Cost / BCM Coal Mining Cost = Mining Cost / Ton
+Hauling Cost = Hauling Cost / Ton
+
+Management dapat melihat Budget → Forecast → Actual → Variance.
+
+24. MANAGEMENT DASHBOARD
+
+Executive Dashboard minimal menampilkan: Production: Coal Plan, Coal
+Actual, Achievement, OB Plan, OB Actual, Stripping Ratio. Contractor:
+Contractor Ranking, Production Achievement, Equipment Availability,
+Productivity, Fuel Efficiency, HSE Score. Cost: Mining Cost/Ton, OB
+Cost/BCM, Hauling Cost/Ton, Budget vs Actual. Contract: Contract Value,
+Utilization, Remaining Value, Expiring Contract. Exception: Production
+below target, Fuel anomaly, Equipment underperformance, Quantity
+discrepancy, Contract over-utilization, Safety incident.
+
+25. OPERATION CONTROL TOWER
+
+System disarankan memiliki Mining Operation Control Tower yang
+menampilkan ringkasan Coal Production, Overburden, Contractor
+Performance, Equipment Status, serta operational alerts dalam satu layar
+untuk management.
+
+26. ALERT & NOTIFICATION
+
+Configurable alert: - Production <90% target: Production Warning - PA
+<85%: Equipment Alert - Fuel > standard +10%: Fuel Alert - Contract
+utilization >80%: Contract Warning - Contract expiry <90 days: Contract
+Expiry - Survey variance >2%: Quantity Alert - HSE incident: Critical
+HSE Alert
+
+Notification melalui in-system notification, email, API/integration, dan
+mobile notification pada fase berikutnya.
+
+27. DOCUMENT MANAGEMENT
+
+Dokumen dapat dilampirkan pada Contract, Amendment, Daily Report, Survey
+Report, Production Reconciliation, Progress Claim, Invoice, HSE Report,
+dan Supporting Evidence.
+
+System menyimpan Document Type, File, Version, Uploaded By, Uploaded
+Date, Reference Transaction.
+
+28. WORKFLOW ENGINE
+
+Workflow harus configurable.
+
+Standard status: DRAFT → SUBMITTED → VERIFIED → APPROVED → CLOSED.
+Alternatif: REJECTED, RETURN FOR REVISION, CANCELLED.
+
+Setiap approval menyimpan Approver, Date, Decision, Comment, Previous
+Status, New Status.
+
+29. AUDIT TRAIL
+
+Setiap transaksi harus mencatat Created By, Created Date, Modified By,
+Modified Date, Approved By, Approved Date.
+
+Perubahan critical data harus menyimpan Old Value, New Value, Changed
+By, Changed Date, Reason.
+
+Approved transaction tidak boleh diedit langsung. Correction harus
+melalui controlled revision/reopen process.
+
+30. INTEGRATION REQUIREMENTS
+
+Architecture harus menyediakan REST API untuk integrasi dengan
+ERP/Odoo/SAP, Weighbridge, GPS/Fleet Management System, Fuel Management
+System, Laboratory/Coal Quality, HR System, Procurement System, Finance
+System, dan Document Management System.
+
+31. DATA IMPORT
+
+Untuk tahap awal implementasi, sistem harus mendukung Excel/CSV import
+untuk Production, Equipment, Fuel, Survey, Contract, Rate, Target, HSE,
+dan Historical production.
+
+Proses import: Upload → Data Validation → Preview → Error Identification
+→ Confirmation → Posting.
+
+32. MOBILE / FIELD OPERATION
+
+System harus responsive untuk Desktop, Tablet, dan Mobile Browser.
+
+Field user harus dapat melakukan Daily activity input, Equipment status
+update, Production input, Fuel input, Photo attachment, Approval, dan
+Issue reporting.
+
+Future enhancement dapat menggunakan dedicated mobile application.
+
+33. NON-FUNCTIONAL REQUIREMENTS
+
+Performance: standard transaction response <3 seconds; dashboard <5
+seconds; heavy analytics dapat menggunakan asynchronous processing.
+Availability target minimum: 99.5%. Security minimum: HTTPS, password
+encryption, RBAC, session timeout, audit log, API authentication, file
+access authorization, database backup. Scalability: multiple sites,
+multiple contractors, multiple contracts, millions of production
+transactions, historical analytics.
+
+34. CORE DATA MODEL
+
+Core entities: COMPANY, SITE, PIT, BLOCK, SEAM, CONTRACTOR, CONTRACT,
+CONTRACT_RATE, EQUIPMENT, EQUIPMENT_STATUS, MINING_PLAN,
+PRODUCTION_TARGET, DAILY_OPERATION, PRODUCTION, HAULING,
+FUEL_TRANSACTION, SURVEY, RECONCILIATION, CONTRACTOR_KPI,
+CONTRACTOR_SCORE, PROGRESS_CLAIM, CLAIM_DETAIL, PENALTY, INCENTIVE,
+INVOICE, HSE_INCIDENT, DOCUMENT, WORKFLOW, APPROVAL, USER, ROLE,
+AUDIT_LOG.
+
+Relationship utama: CONTRACTOR → CONTRACT → CONTRACT_RATE; CONTRACTOR →
+EQUIPMENT; CONTRACTOR → PRODUCTION; CONTRACTOR → FUEL; CONTRACTOR → KPI;
+CONTRACTOR → PROGRESS_CLAIM.
+
+35. KEY BUSINESS CONTROLS
+
+BR-001 Production quantity yang belum diverifikasi tidak boleh digunakan
+untuk billing. BR-002 Survey quantity yang telah final tidak dapat
+diubah tanpa reopening approval. BR-003 Rate billing harus berasal dari
+active contract rate. BR-004 Contractor tidak dapat mengakses transaksi
+contractor lain. BR-005 Invoice tidak dapat melebihi approved progress
+claim. BR-006 Claim tidak dapat melebihi remaining contract
+quantity/value tanpa approval. BR-007 Duplicate production transaction
+harus dicegah. BR-008 Fuel transaction harus memiliki equipment valid.
+BR-009 Equipment harus terasosiasi dengan contractor yang valid pada
+periode transaksi. BR-010 Penalty dan incentive harus mempunyai
+calculation evidence. BR-011 Approved transaction harus immutable dan
+perubahan dilakukan melalui controlled revision.
+
+36. IMPLEMENTATION PHASING
+
+Phase 1 – Mining Operation Control: Master Data, Contractor, Contract,
+Mining Plan, Daily Production, Equipment, Survey, Reconciliation,
+Dashboard. Outcome: single source of truth untuk monitoring produksi
+contractor.
+
+Phase 2 – Contractor Performance & Cost: Fuel, Equipment KPI, Contractor
+KPI, HSE, Cost Analysis, Penalty & Incentive. Outcome: mengukur
+produktivitas dan efisiensi contractor.
+
+Phase 3 – Commercial & Billing: Contract utilization, Progress claim,
+Commercial verification, Billing, ERP integration. Outcome: Production →
+Measurement → Claim → Invoice terintegrasi.
+
+Phase 4 – Intelligent Mining Management: Production forecasting, Fuel
+anomaly detection, Equipment productivity analytics, Contractor
+performance prediction, Cost forecasting, Automated management insights,
+Natural-language analytics.
+
+37. TARGET END-STATE
+
+Target platform mengintegrasikan Management/Executive Dashboard, Mining
+Control Tower, Planning, Operation, Commercial, Survey/Reconciliation,
+Contractor KPI, Cost Analytics, dan Insight Engine.
+
+MCMS diposisikan sebagai Owner Mining Management Platform yang
+menghubungkan operational, technical, contractor performance,
+commercial, dan financial dalam satu data model.
+
+38. KEY SUCCESS INDICATORS
+
+-   ≥95% daily production captured digitally
+-   ≥95% equipment activity captured
+-   100% contractor claims linked dengan verified quantity
+-   100% contract rates maintained centrally
+-   Reduction of manual reconciliation
+-   Reduction of billing disputes
+-   Visibility of cost per BCM/Ton
+-   Contractor performance score tersedia setiap bulan
+-   Contract utilization dapat dimonitor secara real-time
+-   Management dashboard menjadi single source of truth
+-   Full audit trail untuk production-to-payment process
+
+39. RECOMMENDED SYSTEM POSITIONING
+
+Nama yang disarankan: Integrated Mining Contractor Management System
+(iMCMS) atau Mining Operations & Contractor Performance Management
+System.
+
+System positioning: “An integrated owner-side platform to control mining
+production, contractor performance, operational cost, contract
+utilization, and payment validation from plan to payment.”

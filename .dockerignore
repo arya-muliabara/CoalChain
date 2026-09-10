@@ -1,0 +1,14 @@
+﻿node_modules
+dist
+.venv
+venv
+.git
+.env*
+storage
+qa
+FSD_DOCUMENTS
+__pycache__
+.pytest_cache
+*.db
+*.log
+

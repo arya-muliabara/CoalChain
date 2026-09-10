@@ -1,0 +1,7 @@
+﻿# Explicit opt-in to synthetic seed data and demo role accounts.
+services:
+  api:
+    environment:
+      MCMS_DEMO: "true"
+      MCMS_DEMO_PASSWORD: ${MCMS_ADMIN_PASSWORD}
+

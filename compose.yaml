@@ -1,0 +1,53 @@
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: mcms
+      MYSQL_USER: mcms
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping --protocol=TCP -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+  api:
+    build: ./backend
+    environment:
+      DB_HOST: db
+      DB_USER: mcms
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      DB_NAME: mcms
+      MCMS_ADMIN_PASSWORD: ${MCMS_ADMIN_PASSWORD:?Set MCMS_ADMIN_PASSWORD in .env}
+      MCMS_WORKER_SECRET: ${MCMS_WORKER_SECRET:?Set MCMS_WORKER_SECRET in .env}
+      MCMS_SECURE_COOKIE: ${MCMS_SECURE_COOKIE:-false}
+    volumes:
+      - documents:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  worker:
+    build: ./services/worker
+    environment:
+      API_URL: http://api:8000
+      MCMS_WORKER_SECRET: ${MCMS_WORKER_SECRET}
+    depends_on:
+      api:
+        condition: service_healthy
+  web:
+    build: .
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+volumes:
+  mysql_data:
+  documents:
