@@ -17,6 +17,14 @@ try {
   await page.getByText('Coal production', {exact:true}).waitFor();
   await page.screenshot({path:output+'/desktop.png',fullPage:true});
   assert.ok(await page.locator('.kpi-card').count()===4);
+  assert.equal(await page.locator('.sidebar').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(37, 60, 109)');
+  await page.locator('.sidebar').getByRole('button',{name:'Pengaturan',exact:true}).click();
+  await page.getByRole('heading',{name:'Branding aplikasi',exact:true}).waitFor();
+  await page.getByLabel('Nama aplikasi',{exact:true}).fill('CoalChain UI QA');
+  await page.getByLabel('Label operasional',{exact:true}).fill('OWNER CONTROL');
+  await page.getByRole('button',{name:'Simpan branding',exact:true}).click();
+  await page.getByText('CoalChain UI QA',{exact:true}).first().waitFor();
+  await page.locator('.sidebar').getByRole('button',{name:'Control tower',exact:true}).click();
   await page.locator('.segmented').getByRole('button',{name:'Overburden',exact:true}).click();
   assert.equal(await page.locator('.chart svg').getAttribute('aria-label'),'Grafik produksi ob per hari');
   await page.locator('.sidebar').getByRole('button',{name:'Daily production',exact:true}).click();

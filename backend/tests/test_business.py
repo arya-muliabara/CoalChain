@@ -245,3 +245,36 @@ def test_equipment_historical_ownership_cannot_change(client):
     r=client.put("/api/record/"+eq["id"],json={"data":data,"version":eq["version"],"reason":"Ownership transfer"},headers=HEADERS)
     assert r.status_code==409
 
+
+def test_branding_configuration_and_logo_upload(client):
+    initial = client.get("/api/branding")
+    assert initial.status_code == 200
+    assert initial.json()["application_name"] == "MOne CoalChain"
+    updated = client.put("/api/settings/branding", json={
+        "application_name": "CoalChain Operations",
+        "application_tagline": "OWNER CONTROL TOWER",
+    }, headers=HEADERS)
+    assert updated.status_code == 200
+    assert updated.json()["logo_url"] is None
+    png = b"\x89PNG\r\n\x1a\n" + b"branding-test"
+    uploaded = client.post("/api/settings/branding/logo", files={
+        "file": ("brand.png", png, "image/png")
+    }, headers=HEADERS)
+    assert uploaded.status_code == 200, uploaded.text
+    logo_url = uploaded.json()["logo_url"]
+    assert logo_url and "branding/logo?v=" in logo_url
+    logo = client.get(logo_url)
+    assert logo.status_code == 200
+    assert logo.content == png
+    invalid = client.post("/api/settings/branding/logo", files={
+        "file": ("brand.svg", b"<svg/>", "image/svg+xml")
+    }, headers=HEADERS)
+    assert invalid.status_code == 422
+    removed = client.delete("/api/settings/branding/logo", headers=HEADERS)
+    assert removed.status_code == 200
+    assert removed.json()["logo_url"] is None
+    other = TestClient(app)
+    assert other.post("/api/settings/branding/logo", files={
+        "file": ("brand.png", png, "image/png")
+    }, headers=HEADERS).status_code == 401
+

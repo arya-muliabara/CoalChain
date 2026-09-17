@@ -27,6 +27,20 @@ from .analytics import dashboard
 STORAGE = Path(os.getenv("MCMS_STORAGE", "storage"))
 DEMO = os.getenv("MCMS_DEMO", "false").lower() == "true"
 attempts = defaultdict(deque)
+DEFAULT_BRANDING = {
+    "application_name": "MOne CoalChain",
+    "application_tagline": "MINING OPERATIONS",
+    "logo_version": 0,
+}
+
+def branding(db):
+    entry = db.get(Config, "branding")
+    value = {**DEFAULT_BRANDING, **(entry.value if entry else {})}
+    if (STORAGE / "branding-logo").is_file() and value.get("logo_content_type"):
+        value["logo_url"] = f"/api/branding/logo?v={value['logo_version']}"
+    else:
+        value["logo_url"] = None
+    return value
 
 @asynccontextmanager
 async def lifespan(app):
@@ -52,6 +66,9 @@ async def lifespan(app):
             db.commit()
         if not db.get(Config, "settings"):
             db.add(Config(key="settings", value=copy.deepcopy(DEFAULT_SETTINGS)))
+            db.commit()
+        if not db.get(Config, "branding"):
+            db.add(Config(key="branding", value=copy.deepcopy(DEFAULT_BRANDING)))
             db.commit()
         if DEMO and not db.scalar(select(Record).limit(1)):
             from .seed import seed
@@ -93,6 +110,18 @@ class Action(BaseModel):
 @app.get("/api/health")
 def health():
     return {"status": "ok", "service": "mcms-api"}
+
+@app.get("/api/branding")
+def get_branding(db=Depends(db_session)):
+    return branding(db)
+
+@app.get("/api/branding/logo")
+def get_branding_logo(db=Depends(db_session)):
+    value = branding(db)
+    path = STORAGE / "branding-logo"
+    if not value["logo_url"] or not path.is_file():
+        fail("Logo belum dikonfigurasi.", 404)
+    return FileResponse(path, media_type=value["logo_content_type"], filename="application-logo")
 
 @app.post("/api/auth/login")
 def login(body: Login, request: Request, response: Response, db=Depends(db_session)):
@@ -406,6 +435,60 @@ def put_settings(body: dict, user=Depends(current_user), db=Depends(db_session))
     audit(db, user, "SETTINGS_CHANGED", before=before, after=body)
     db.commit()
     return body
+
+@app.put("/api/settings/branding")
+def put_branding(body: dict, user=Depends(current_user), db=Depends(db_session)):
+    require_admin(user)
+    application_name = str(body.get("application_name", "")).strip()
+    application_tagline = str(body.get("application_tagline", "")).strip().upper()
+    if not 1 <= len(application_name) <= 60 or not 1 <= len(application_tagline) <= 60:
+        fail("Nama aplikasi dan label operasional harus berisi 1 sampai 60 karakter.")
+    if any(ord(char) < 32 for char in application_name + application_tagline):
+        fail("Nama aplikasi atau label operasional tidak valid.")
+    entry = db.get(Config, "branding")
+    before = branding(db)
+    entry.value = {**entry.value, "application_name": application_name, "application_tagline": application_tagline}
+    audit(db, user, "BRANDING_UPDATED", reason="Branding configuration", before=before, after=branding(db))
+    db.commit()
+    return branding(db)
+
+def image_type(content: bytes):
+    if content.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if content.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if len(content) >= 12 and content[:4] == b"RIFF" and content[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+@app.post("/api/settings/branding/logo")
+async def upload_branding_logo(file: UploadFile=File(...), user=Depends(current_user), db=Depends(db_session)):
+    require_admin(user)
+    content = await read_upload(file, max_size=2 * 1024 * 1024)
+    content_type = image_type(content)
+    if not content_type:
+        fail("Logo harus berupa gambar PNG, JPG/JPEG, atau WebP yang valid.")
+    entry = db.get(Config, "branding")
+    before = branding(db)
+    temporary = STORAGE / "branding-logo-upload"
+    temporary.write_bytes(content)
+    temporary.replace(STORAGE / "branding-logo")
+    entry.value = {**entry.value, "logo_content_type": content_type, "logo_version": int(entry.value.get("logo_version", 0)) + 1}
+    audit(db, user, "BRANDING_LOGO_UPLOADED", reason=Path(file.filename or "application-logo").name, before=before, after=branding(db))
+    db.commit()
+    return branding(db)
+
+@app.delete("/api/settings/branding/logo")
+def remove_branding_logo(user=Depends(current_user), db=Depends(db_session)):
+    require_admin(user)
+    entry = db.get(Config, "branding")
+    before = branding(db)
+    (STORAGE / "branding-logo").unlink(missing_ok=True)
+    entry.value = {key: value for key, value in entry.value.items() if key != "logo_content_type"}
+    entry.value["logo_version"] = int(entry.value.get("logo_version", 0)) + 1
+    audit(db, user, "BRANDING_LOGO_REMOVED", reason="Logo removed", before=before, after=branding(db))
+    db.commit()
+    return branding(db)
 
 @app.get("/api/users")
 def users(user=Depends(current_user), db=Depends(db_session)):

@@ -1,4 +1,4 @@
-﻿# MOne CoalChain
+# MOne CoalChain
 
 Aplikasi Mining Contractor Management System berdasarkan **FSD_DOCUMENTS/FSD_Mining_Contractor_Management_System-1.docx**, termasuk technology stack pada bagian 40.
 
@@ -78,7 +78,7 @@ Admin dapat menjalankan semua tahap untuk pengujian. Pada operasional, gunakan a
 - Assurance: survey dan rekonsiliasi.
 - Performance: fuel, HSE, scorecard.
 - Commercial: kontrak, rate, amendment, rule penalty/incentive, claim, invoice/payment, cost analytics.
-- Administrasi: approval inbox, audit, user/scope, threshold, bobot KPI, workflow.
+- Administrasi: approval inbox, audit, user/scope, threshold, bobot KPI, workflow, nama aplikasi, dan upload logo.
 - Dokumen ber-versi, CSV export, CSV/XLSX import dengan preview dan konfirmasi atomik.
 
 ## Offline PWA
