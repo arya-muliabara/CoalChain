@@ -19,7 +19,7 @@ Buka **http://127.0.0.1:5173**.
 
 Script memasang dependensi di **%LOCALAPPDATA%/MOne-CoalChain/dev**, sehingga tidak terganggu sinkronisasi Google Drive. Database SQLite dan lampiran lokal juga disimpan di sana. Source tetap di repository. Jalankan ulang script setelah perubahan frontend agar salinan runtime diperbarui. SQLite hanya untuk pengembangan, bukan deployment produksi.
 
-Tanpa `-Demo`, aplikasi membuat admin dan database kosong; password awal diminta saat menjalankan script. Seed demo hanya dijalankan ketika database belum memiliki records. Mengganti environment password tidak mereset akun yang sudah ada; gunakan menu profil untuk mengganti password.
+Tanpa `-Demo`, aplikasi membuat admin dan database kosong; password awal diminta saat menjalankan script. Seed operasional demo dijalankan ketika database belum memiliki records. Jika belum ada master stockpile, mode demo juga menambahkan Stockpile Main dengan saldo awal 12.500 ton. Mengganti environment password tidak mereset akun yang sudah ada; gunakan menu profil untuk mengganti password.
 
 Akun role tambahan tersedia hanya pada demo, misalnya `contractor.user@coalchain.local`, `contractor.supervisor@coalchain.local`, `owner.supervisor@coalchain.local`, `surveyor@coalchain.local`, `commercial@coalchain.local`, `finance@coalchain.local`, dengan password demo yang sama. Akun kontraktor demo dibatasi ke kontraktor pertama.
 
@@ -61,12 +61,12 @@ Port web hanya di-bind ke loopback. Sebelum akses jaringan/produksi, pasang reve
 
 1. Buat site, pit, kontraktor, equipment, dan lokasi.
 2. Buat kontrak serta rate; submit dan selesaikan approval. Tambahkan monthly mining plan.
-3. Input daily production. Tambahkan lampiran sebelum submit. Contractor Supervisor lalu Owner Supervisor melakukan approval hingga **VERIFIED**.
-4. Buat survey sesuai pit, block, activity, material, unit, dan periode produksi. Quantity harus sama dengan selisih volume. Selesaikan approval Surveyor → Engineering → Owner.
-5. Buat rekonsiliasi dari DPR verified dan survey approved. Sistem menjaga batas alokasi survey. Variance di luar toleransi wajib memiliki penjelasan penyelesaian.
-6. Buat progress claim dari rekonsiliasi approved. Rate, quantity, jarak, retensi, penalty, incentive, dan net dihitung server. Jika ada rule aktif, pilih scorecard approved.
-7. Selesaikan enam tahap verifikasi claim hingga Finance. Buat invoice; jumlah kumulatif tidak boleh melebihi net claim.
-8. Approve invoice lalu catat payment reference. Invoice menjadi **CLOSED**. Ini pencatatan pembayaran, tidak mengirim transaksi bank.
+3. Buat master **Stockpile & saldo** untuk setiap ROM, intermediate stockpile, port, atau jetty. Tentukan kapasitas, minimum stock, saldo awal, dan coal specification.
+4. Catat **Coal hauling** dari lokasi asal ke stockpile tujuan melalui moda **Darat**, **Sungai**, atau **Laut**. Masukkan jarak satu arah, rit/voyage, tonase, dan DO/surat jalan/BOL. Setelah Owner Supervisor menyetujui, sistem membuat penerimaan stockpile otomatis.
+5. Catat **Mutasi stockpile** untuk addition, shipment/sale, transfer out, quality adjustment, shrinkage, atau stock count. Mutasi OUT ditolak jika melebihi saldo buku dan mutasi manual membutuhkan approval Owner Supervisor.
+6. Input daily production. Tambahkan lampiran sebelum submit. Contractor Supervisor lalu Owner Supervisor melakukan approval hingga **VERIFIED**.
+7. Buat survey sesuai pit, block, activity, material, unit, dan periode produksi. Quantity harus sama dengan selisih volume. Selesaikan approval Surveyor, Engineering, lalu Owner.
+8. Buat rekonsiliasi dari DPR verified dan survey approved, lalu progress claim. Rate, quantity, jarak, retensi, penalty, incentive, dan net dihitung server. Selesaikan approval claim, invoice, dan catat payment reference hingga invoice **CLOSED**.
 
 Admin dapat menjalankan semua tahap untuk pengujian. Pada operasional, gunakan akun role masing-masing.
 
@@ -74,7 +74,7 @@ Admin dapat menjalankan semua tahap untuk pengujian. Pada operasional, gunakan a
 
 - Control tower: produksi verified vs monthly plan, fleet, scorecard, alert, contract utilization.
 - Master data: site, pit/block/seam, lokasi/rute, kontraktor.
-- Operations: equipment, manpower, mining plan, DPR, hauling.
+- Operations: equipment, manpower, mining plan, DPR, **Coal hauling multi-moda**, master **Stockpile & saldo**, serta **Mutasi stockpile**.
 - Assurance: survey dan rekonsiliasi.
 - Performance: fuel, HSE, scorecard.
 - Commercial: kontrak, rate, amendment, rule penalty/incentive, claim, invoice/payment, cost analytics.
@@ -113,6 +113,7 @@ Folder sinkronisasi seperti Google Drive dapat gagal saat menulis ribuan depende
 - OpenAPI: **http://127.0.0.1:8000/api/docs**
 - Health: `GET /api/health`
 - Auth: `POST /api/auth/login`, `GET /api/auth/me`
+- Stockpile overview: `GET /api/stockpiles/overview` (saldo buku, kapasitas, utilisasi, dan minimum stock)
 - CRUD: `/api/records/{module}`, `/api/record/{id}`
 - Approval: `POST /api/record/{id}/action`
 - Import: `/api/import/{module}/preview`, `/api/import/confirm/{batch_id}`
