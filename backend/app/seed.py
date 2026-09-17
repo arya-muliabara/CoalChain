@@ -1,9 +1,9 @@
-﻿"""Synthetic, opt-in demo data. Never called in production unless MCMS_DEMO=true."""
+"""Synthetic, opt-in demo data. Never called in production unless MCMS_DEMO=true."""
 import os
 import calendar
 from datetime import date
 from sqlalchemy import select
-from .database import User
+from .database import User, Record
 from .catalog import CATALOG, ROLES
 from .business import save_record, transition
 from .security import hash_password
@@ -72,3 +72,15 @@ def seed(db):
                         password_hash=hash_password(demo_password)))
     db.commit()
 
+
+def ensure_demo_stockpile(db):
+    if db.scalar(select(Record).where(Record.kind == "stockpiles")):
+        return
+    admin = db.get(User, "USR-ADMIN")
+    site = db.scalar(select(Record).where(Record.kind == "sites"))
+    if not admin or not site:
+        return
+    save_record(db, admin, "stockpiles", {"name": "Stockpile Main", "code": "SP-MAIN", "site_id": site.id,
+                                             "type": "ROM", "capacity": 50000, "minimum_stock": 5000,
+                                             "opening_balance": 12500, "coal_spec": "GAR 4200"})
+    db.commit()

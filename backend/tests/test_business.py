@@ -278,3 +278,24 @@ def test_branding_configuration_and_logo_upload(client):
         "file": ("brand.png", png, "image/png")
     }, headers=HEADERS).status_code == 401
 
+
+def test_coal_hauling_posts_stockpile_receipt_and_controls_balance(client):
+    site = sample(client, "sites")
+    contractor = sample(client, "contractors")
+    equipment = next(row for row in rows(client, "equipment") if row["contractor_id"] == contractor["id"])
+    origin = next(row for row in rows(client, "locations") if row["site_id"] == site["id"])
+    stockpile = create(client, "stockpiles", {"name": "Test Stockpile " + uuid.uuid4().hex[:6], "code": "SP-" + uuid.uuid4().hex[:6], "site_id": site["id"], "type": "ROM", "capacity": 1000, "minimum_stock": 50, "opening_balance": 100, "coal_spec": "GAR 4200"})
+    hauling = create(client, "hauling", {"date": date.today().isoformat(), "shift": "Day", "site_id": site["id"], "contractor_id": contractor["id"], "equipment_id": equipment["id"], "origin_location_id": origin["id"], "destination_stockpile_id": stockpile["id"], "transport_mode": "Darat", "route": "ROM to stockpile", "distance": 12.5, "trips": 4, "material": "Coal", "quantity": 200, "unit": "Ton", "transport_reference": "DO-" + uuid.uuid4().hex[:8], "carrier": "DT-001"})
+    approved = approve(client, hauling)
+    assert approved["status"] == "APPROVED" and approved["ton_km"] == 2500
+    overview = client.get("/api/stockpiles/overview").json()
+    position = next(item for item in overview["items"] if item["id"] == stockpile["id"])
+    assert position["book_balance"] == 300
+    receipt = next(row for row in rows(client, "stockpile_movements") if row.get("source_hauling_id") == hauling["id"])
+    assert receipt["direction"] == "IN" and receipt["quantity"] == 200
+    outgoing = approve(client, create(client, "stockpile_movements", {"date": date.today().isoformat(), "site_id": site["id"], "stockpile_id": stockpile["id"], "direction": "OUT", "movement_type": "Sale / Shipment", "quantity": 250, "unit": "Ton", "reference": "SHIP-" + uuid.uuid4().hex[:8], "notes": "Test shipment"}))
+    assert outgoing["status"] == "APPROVED"
+    position = next(item for item in client.get("/api/stockpiles/overview").json()["items"] if item["id"] == stockpile["id"])
+    assert position["book_balance"] == 50
+    rejected = client.post("/api/records/stockpile_movements", json={"data": {"date": date.today().isoformat(), "site_id": site["id"], "stockpile_id": stockpile["id"], "direction": "OUT", "movement_type": "Sale / Shipment", "quantity": 51, "unit": "Ton", "reference": "SHIP-" + uuid.uuid4().hex[:8], "notes": "Should fail"}}, headers=HEADERS)
+    assert rejected.status_code == 422 and "tidak mencukupi" in rejected.text

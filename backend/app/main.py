@@ -21,7 +21,7 @@ from sqlalchemy.exc import OperationalError
 from .database import Base, engine, SessionLocal, Record, User, AuthSession, Audit, Document, Config, ImportBatch, now
 from .catalog import CATALOG, ROLES, ADMIN, CONTRACTOR_ROLES, DEFAULT_SETTINGS
 from .security import db_session, current_user, hash_password, verify_password, scope_query, can_write, require_admin, public_user
-from .business import fail, get_record, serialize, save_record, transition, audit, settings, validate, natural_key
+from .business import fail, get_record, serialize, save_record, transition, audit, settings, validate, natural_key, stockpile_snapshot, sync_hauling_receipt
 from .analytics import dashboard
 
 STORAGE = Path(os.getenv("MCMS_STORAGE", "storage"))
@@ -64,15 +64,24 @@ async def lifespan(app):
                 raise RuntimeError("MCMS_ADMIN_PASSWORD must contain at least 12 characters.")
             db.add(User(id="USR-ADMIN", email="admin@coalchain.local", name="Administrator", role=ADMIN, password_hash=hash_password(password)))
             db.commit()
-        if not db.get(Config, "settings"):
+        settings_entry = db.get(Config, "settings")
+        if not settings_entry:
             db.add(Config(key="settings", value=copy.deepcopy(DEFAULT_SETTINGS)))
             db.commit()
+        else:
+            workflows = {**copy.deepcopy(DEFAULT_SETTINGS["workflows"]), **settings_entry.value.get("workflows", {})}
+            merged = {**copy.deepcopy(DEFAULT_SETTINGS), **settings_entry.value, "workflows": workflows}
+            if merged != settings_entry.value:
+                settings_entry.value = merged
+                db.commit()
         if not db.get(Config, "branding"):
             db.add(Config(key="branding", value=copy.deepcopy(DEFAULT_BRANDING)))
             db.commit()
-        if DEMO and not db.scalar(select(Record).limit(1)):
-            from .seed import seed
-            seed(db)
+        if DEMO:
+            from .seed import seed, ensure_demo_stockpile
+            if not db.scalar(select(Record).limit(1)):
+                seed(db)
+            ensure_demo_stockpile(db)
     yield
 
 app = FastAPI(title="MOne CoalChain API", version="0.1.0", lifespan=lifespan, docs_url="/api/docs", openapi_url="/api/openapi.json", redoc_url=None)
@@ -183,6 +192,12 @@ def dashboard_route(period: str | None=None, site: str | None=None, contractor: 
         fail("Periode tidak valid.")
     return dashboard(db, user, period, site, contractor)
 
+@app.get("/api/stockpiles/overview")
+def stockpile_overview(user=Depends(current_user), db=Depends(db_session)):
+    rows = list(db.scalars(scope_query(user, select(Record).where(Record.kind == "stockpiles"), Record)))
+    snapshots = [stockpile_snapshot(db, row) for row in rows if row.status != "CANCELLED"]
+    return {"items": snapshots, "total_balance": round(sum(row["book_balance"] for row in snapshots), 2),
+            "total_capacity": round(sum(float(row.get("capacity") or 0) for row in snapshots), 2)}
 @app.get("/api/lookups")
 def lookups(user=Depends(current_user), db=Depends(db_session)):
     q = scope_query(user, select(Record).where(Record.status.not_in(["CANCELLED", "REJECTED"])), Record)
@@ -206,7 +221,8 @@ def records(kind: str, search: str="", status: str="", site: str="", contractor:
     if contractor:
         q = q.where(Record.contractor_id == contractor)
     # Search across JSON values in a database-portable way for the initial release.
-    items = [serialize(r) for r in db.scalars(q.order_by(Record.created_at.desc()))]
+    rows = list(db.scalars(q.order_by(Record.created_at.desc())))
+    items = [stockpile_snapshot(db, r) if kind == "stockpiles" else serialize(r) for r in rows]
     if search:
         items = [r for r in items if search.lower() in json.dumps(r, ensure_ascii=False).lower()]
     if period:
@@ -249,6 +265,8 @@ def update_record(record_id: str, body: Mutation, user=Depends(current_user), db
 def action(record_id: str, body: Action, user=Depends(current_user), db=Depends(db_session)):
     row = get_record(db, user, record_id, lock=True)
     transition(db, user, row, body.action, body.comment, body.version)
+    if row.kind == "hauling" and row.status == "APPROVED":
+        sync_hauling_receipt(db, user, row)
     db.commit()
     return serialize(row)
 

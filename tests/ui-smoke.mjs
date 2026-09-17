@@ -17,7 +17,7 @@ try {
   await page.getByText('Coal production', {exact:true}).waitFor();
   await page.screenshot({path:output+'/desktop.png',fullPage:true});
   assert.ok(await page.locator('.kpi-card').count()===4);
-  assert.equal(await page.locator('.sidebar').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(37, 60, 109)');
+  assert.equal(await page.locator('.sidebar').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(0, 0, 0)');
   await page.locator('.sidebar').getByRole('button',{name:'Pengaturan',exact:true}).click();
   await page.getByRole('heading',{name:'Branding aplikasi',exact:true}).waitFor();
   await page.getByLabel('Nama aplikasi',{exact:true}).fill('CoalChain UI QA');

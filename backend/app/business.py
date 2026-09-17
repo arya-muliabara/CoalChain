@@ -232,10 +232,33 @@ def validate(db, user, kind, incoming, record_id=None):
             fail("Total invoice tidak boleh melebihi net claim approved.")
         if data["due"] < data["date"]:
             fail("Jatuh tempo tidak boleh mendahului tanggal invoice.")
+    if kind == "stockpiles":
+        if data["capacity"] <= 0 or data["minimum_stock"] < 0 or data["opening_balance"] < 0:
+            fail("Kapasitas dan saldo awal stockpile harus bernilai positif.")
+        if data["minimum_stock"] > data["capacity"] or data["opening_balance"] > data["capacity"]:
+            fail("Minimum stock dan saldo awal tidak boleh melebihi kapasitas stockpile.")
+    if kind == "hauling":
+        if data["material"] != "Coal" or data["unit"] != "Ton":
+            fail("Coal hauling hanya menerima material Coal dalam satuan Ton.")
+        if data["distance"] <= 0 or data["trips"] <= 0 or data["quantity"] <= 0:
+            fail("Jarak, jumlah rit/voyage, dan tonase hauling harus lebih besar dari nol.")
+        stockpile = get_record(db, user, data["destination_stockpile_id"], "stockpiles")
+        if stockpile.data["site_id"] != data["site_id"]:
+            fail("Stockpile tujuan harus berada pada site yang sama.")
+        data["ton_km"] = round(data["quantity"] * data["distance"], 2)
+        data["average_load"] = round(data["quantity"] / data["trips"], 2)
+    if kind == "stockpile_movements":
+        stockpile = get_record(db, user, data["stockpile_id"], "stockpiles")
+        if stockpile.data["site_id"] != data["site_id"]:
+            fail("Stockpile harus berada pada site yang sama.")
+        if data["quantity"] <= 0 or data["unit"] != "Ton":
+            fail("Mutasi stockpile harus bernilai positif dalam satuan Ton.")
+        if data["direction"] == "OUT" and stockpile_balance(db, data["stockpile_id"], record_id) + .0001 < data["quantity"]:
+            fail("Saldo stockpile tidak mencukupi untuk mutasi OUT.")
     return data
 
 def natural_key(kind, data):
-    fields = {"production": ["date", "shift", "equipment_id", "activity", "pit_id"], "fuel": ["contractor_id", "reference"],
+    fields = {"production": ["date", "shift", "equipment_id", "activity", "pit_id"], "hauling": ["date", "equipment_id", "origin_location_id", "destination_stockpile_id", "transport_reference"], "stockpiles": ["code"], "stockpile_movements": ["date", "stockpile_id", "direction", "reference"], "fuel": ["contractor_id", "reference"],
               "scorecards": ["contractor_id", "site_id", "period"], "equipment": ["name"], "contracts": ["name"],
               "contractors": ["vendor_id"], "invoices": ["contractor_id", "name"]}.get(kind)
     return kind + ":" + "|".join(str(data[k]).strip().lower() for k in fields) if fields else None
@@ -343,3 +366,56 @@ def transition(db, user, row, action, comment, version):
     row.modified_at, row.modified_by = now(), user.email
     audit(db, user, action.upper(), row, before, comment)
     return row
+
+def stockpile_balance(db, stockpile_id, exclude=None):
+    stockpile = db.get(Record, stockpile_id)
+    if not stockpile or stockpile.kind != "stockpiles":
+        fail("Stockpile tidak ditemukan.", 404)
+    balance = float(stockpile.data.get("opening_balance") or 0)
+    for movement in all_rows(db, "stockpile_movements", exclude):
+        data = movement.data
+        if movement.status not in FINAL or data.get("stockpile_id") != stockpile_id:
+            continue
+        source_hauling_id = data.get("source_hauling_id")
+        if source_hauling_id:
+            hauling = db.get(Record, source_hauling_id)
+            if not hauling or hauling.kind != "hauling" or hauling.status != "APPROVED":
+                continue
+        sign = 1 if data.get("direction") == "IN" else -1
+        balance += sign * float(data.get("quantity") or 0)
+    return round(balance, 2)
+
+def stockpile_snapshot(db, stockpile):
+    balance = stockpile_balance(db, stockpile.id)
+    capacity = float(stockpile.data.get("capacity") or 0)
+    minimum = float(stockpile.data.get("minimum_stock") or 0)
+    return {**serialize(stockpile), "book_balance": balance,
+            "available_capacity": round(max(0, capacity - balance), 2),
+            "capacity_utilization": round(balance / capacity * 100, 2) if capacity else 0,
+            "below_minimum": balance < minimum}
+
+def sync_hauling_receipt(db, user, hauling):
+    if hauling.kind != "hauling" or hauling.status != "APPROVED":
+        return None
+    key = "hauling-receipt:" + hauling.id
+    receipt = db.scalar(select(Record).where(Record.natural_key == key))
+    data = {"date": hauling.data["date"], "site_id": hauling.data["site_id"],
+            "stockpile_id": hauling.data["destination_stockpile_id"], "direction": "IN",
+            "movement_type": "Hauling Receipt", "quantity": hauling.data["quantity"], "unit": "Ton",
+            "reference": hauling.data["transport_reference"],
+            "notes": "Penerimaan otomatis dari Coal Hauling " + hauling.id,
+            "source_hauling_id": hauling.id, "transport_mode": hauling.data["transport_mode"],
+            "distance": hauling.data["distance"], "ton_km": hauling.data.get("ton_km", 0)}
+    if receipt:
+        before = serialize(receipt)
+        receipt.data, receipt.status, receipt.modified_by, receipt.modified_at = data, "APPROVED", user.email, now()
+        receipt.version += 1
+        audit(db, user, "HAULING_RECEIPT_UPDATED", receipt, before, "Sinkronisasi haul approved")
+        return receipt
+    receipt = Record(id="STM-" + uuid.uuid4().hex[:10].upper(), kind="stockpile_movements", natural_key=key,
+                     contractor_id=hauling.contractor_id, site_id=hauling.site_id, data=data, status="APPROVED", stage=0,
+                     workflow=[], version=1, created_by=user.email, created_at=now(), modified_by=user.email, modified_at=now())
+    db.add(receipt)
+    db.flush()
+    audit(db, user, "HAULING_RECEIPT_POSTED", receipt, reason="Penerimaan otomatis dari Coal Hauling approved")
+    return receipt
